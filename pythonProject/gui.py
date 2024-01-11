@@ -1,5 +1,6 @@
 import streamlit as st
 from streamlit_lottie import st_lottie
+
 from nasdaq_100 import func_calling
 import json
 from companies.ASML import asml
@@ -7,7 +8,9 @@ from companies.META import meta
 from companies.BKNG import bkng
 from companies.NVDA import nvda
 import requests
-
+import importlib
+st_lottie_module = importlib.import_module("streamlit_lottie")
+st_lottie = getattr(st_lottie_module, "st_lottie")
 
 def load_lottieurl(url: str):
     r = requests.get(url)
