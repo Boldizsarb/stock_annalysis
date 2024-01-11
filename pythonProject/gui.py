@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_lottie import st_lottie
+#from streamlit_lottie import st_lottie
 
 from nasdaq_100 import func_calling
 import json
@@ -8,9 +8,8 @@ from companies.META import meta
 from companies.BKNG import bkng
 from companies.NVDA import nvda
 import requests
-import importlib
-st_lottie_module = importlib.import_module("streamlit_lottie")
-st_lottie = getattr(st_lottie_module, "st_lottie")
+
+
 
 def load_lottieurl(url: str):
     r = requests.get(url)
@@ -56,6 +55,7 @@ def gui(): ## the whole gui!
                 "The most accurate and up-to-date financial data is made available through Yahoo APIs on the website. This ensures that users are provided with the most reliable information at the present moment.")
             st.write("[Learn more >](https://finance.yahoo.com/)")
         with right_column:
+            """
             st_lottie(
                 lottie_stocks,
                 speed=0.5,
@@ -66,6 +66,7 @@ def gui(): ## the whole gui!
                 width=None,
                 key=None
             )
+             """
 
     st.write("---")
     st.write(
