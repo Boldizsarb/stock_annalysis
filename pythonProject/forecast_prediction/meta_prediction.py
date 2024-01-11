@@ -34,11 +34,8 @@ def load_stock_data():
 
 def lstm_prediction():  ### very first one
 
-    """
-    stock_data = yf.download(ticker, start=start_date, end=end_date, interval=interval)
-    selected_columns = stock_data[['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']]
-    new_dataframe = pd.DataFrame(selected_columns)
-    """
+
+
     ############################ LSMT ######## LSMT ######## LSMT ######## LSMT ######## LSMT ######## LSMT
 
     # data = yf.download(ticker, start=start_date, end=end_date, interval="1d")
