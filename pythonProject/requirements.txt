@@ -100,3 +100,4 @@ wheel==0.42.0
 wrapt==1.14.1
 yfinance==0.2.33
 zipp==3.17.0
+textblob
