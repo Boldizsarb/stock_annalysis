@@ -43,8 +43,8 @@ def load_lottiefile(filepath: str):
 
 def gui(): ## the whole gui!
     st.set_page_config(page_title="Top 100 Stock / Trading", page_icon="🏢", layout="wide") ## can be called once only, at the begining of the render
-    lottie_stocks = load_lottiefile("pythonProject/stock.json")
-    #lottie_stocks = load_lottiefile("stock.json")
+    #lottie_stocks = load_lottiefile("pythonProject/stock.json")
+    lottie_stocks = load_lottiefile("stock.json")
 
 
     with st.container():

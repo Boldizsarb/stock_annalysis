@@ -4,8 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from textblob import TextBlob
-
-
+from correlation import calculate_meta_correlaiton
 import requests
 from tensorflow.python.keras.layers import Dense
 #from tensorflow.keras.models import Sequential
@@ -410,6 +409,16 @@ def sell_prediction_forecast2(days_to_forecast): ## the parameter is the what is
 
     # ###############################Display
     st.plotly_chart(fig) ### the chart
+    st.write("The application using primarily LSTM but you can chose other models:")
+    with st.expander("Linear regression"):
+        from forecast_prediction.meta_prediction import linear_regression_forecast
+        st.write("If you want to chose set how many days you want to forecast, set it up above!")
+        linear_regression_forecast(days_to_forecast)
+    with st.expander("Forest Model:"):
+        forest_model(days_to_forecast)
+    with st.expander("Arime Model:"):
+        arima(days_to_forecast)
+    st.write()
     if "Hold -" in decision:
         st.write("Alternatively, if you do not want to hold: ")
         if formatted_latest_stock_price > formatted_last_forecasted_amount:
