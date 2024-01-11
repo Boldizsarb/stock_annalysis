@@ -7,15 +7,26 @@ from textblob import TextBlob
 
 from correlation import calculate_asml_correlation
 
+import requests
 from tensorflow.python.keras.layers import Dense
 #from tensorflow.keras.models import Sequential
 from keras.models import Sequential
 #from tensorflow.keras.layers import LSTM, Dense, Dropout ## doesnt work
 from keras.layers import LSTM, Dense, Dropout
+from datetime import timedelta
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from pmdarima import auto_arima
+from statsmodels.tools.eval_measures import rmse
+import warnings
 import plotly.graph_objs as go
-import requests
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+
+
 
 
 end_date = datetime.now()
@@ -34,6 +45,140 @@ def analyze_sentiment(text):
 
 
 def asml_prediction_forecast2(days_to_forecast): ## the parameter is the what is the time interval, how long into the future!
+
+    def arima(days_to_forecast):
+        ## loading handling and cleaning data ->
+        data = load_stock_data()
+        # print(data)
+        df = pd.DataFrame(data)
+        selected_columns = df[['Close']]
+        # print(selected_columns)
+        selected_columns.index = pd.to_datetime(selected_columns.index)
+
+        selected_columns = selected_columns.asfreq('D')  # 'D' for daily, adjust accordingly
+        # Check for missing values
+        if selected_columns['Close'].isna().any():
+            print("Missing values found. Handling missing values...")
+
+            selected_columns['Close'] = selected_columns['Close'].ffill()
+
+            # selected_columns['Close'] = selected_columns['Close'].bfill()
+
+        # decomposition
+        # ETS Decomposition: The ETS Decomposition is used on time-series data to split error, trend and seasonality of the data.
+        ets = seasonal_decompose(selected_columns['Close'], model='multiplicative')
+        # ets.plot()
+        # plt.show()
+
+        ######################################
+
+        # Fit auto_arima function
+        warnings.filterwarnings("ignore")
+        stepwise_fit = auto_arima(selected_columns['Close'], start_p=1, start_q=1,
+                                  max_p=3, max_q=3, m=12,
+                                  start_P=0, seasonal=True,
+                                  d=None, D=1, trace=True,
+                                  error_action='ignore',  # we don't want to know if an order does not work
+                                  suppress_warnings=True,  # we don't want convergence warnings
+                                  stepwise=True)
+
+        stepwise_fit.summary()
+        # print(stepwise_fit)
+
+        # Extract ARIMA parameters
+        arima_order = stepwise_fit.order
+        seasonal_order = stepwise_fit.seasonal_order
+
+        arima_params = (arima_order, seasonal_order)
+
+        print("ARIMA parameters:", arima_params)
+
+        print("done1")
+
+        # Split data into train / test sets
+        train = selected_columns.iloc[:len(selected_columns) - 12]
+        test = selected_columns.iloc[len(selected_columns) - days_to_forecast:]
+
+        # fitting the extracted best model values to the model
+        model = SARIMAX(selected_columns['Close'],
+                        order=arima_order,
+                        seasonal_order=seasonal_order)
+
+        result = model.fit()
+        result.summary()
+        start = len(train)
+        end = len(train) + len(test) - 1
+        # Predictions for one-year against the test set and the rmse being measured on this one!
+
+        predictions = result.predict(start, end,
+                                     typ='levels').rename("Predictions")
+
+        # plot predictions and actual values
+        predictions  # .plot(legend=True)
+        test['Close']  # .plot(legend=True)
+        # plt.show()
+        # plt.show()
+
+        # Calculate root mean squared error
+        print("rmse = ", rmse(test["Close"], predictions))
+
+        # Calculate mean squared error
+        print("mse = ", mean_squared_error(test["Close"], predictions))
+
+        # Train the model on the full dataset
+        model = SARIMAX(selected_columns['Close'],
+                        order=(1, 0, 0),
+                        seasonal_order=(2, 1, 0, 12))
+
+        # Forecast for the next 3 years
+        forecast = result.predict(start=len(selected_columns),
+                                  end=(len(selected_columns) - 1) + days_to_forecast,
+                                  typ='levels').rename('Forecast')
+
+
+        fig = go.Figure()
+        # Historical data
+        fig.add_trace(
+            go.Scatter(x=selected_columns.index, y=selected_columns['Close'], mode='lines',
+                       name='Historical Close Price'))
+        # Forecast data
+        fig.add_trace(go.Scatter(x=forecast.index, y=forecast, mode='lines', name='Forecast', line=dict(dash='dash')))
+
+        fig.update_layout(title=f'{ticker}Stock Price Forecast', xaxis_title='Date', yaxis_title='Price')
+        st.plotly_chart(fig, use_container_width=True)  ## vis
+
+    def forest_model(days_to_forecast):
+
+        stock_data = yf.download(ticker, start=start_date, end=end_date, interval=interval)
+
+        selected_columns = load_stock_data()
+        new_dataframe = pd.DataFrame(selected_columns)
+        X = new_dataframe.drop(columns=['Close'])
+        y = new_dataframe['Close']
+
+        #  historical data
+        random_forest_regressor = RandomForestRegressor(n_estimators=100, random_state=0)
+        random_forest_regressor.fit(X, y)
+        avg_pct_change = y.pct_change().dropna().mean()
+        forecasted_values = [y.iloc[-1]]
+        for i in range(days_to_forecast):
+            next_value = forecasted_values[-1] * (1 + avg_pct_change)
+            forecasted_values.append(next_value)
+
+        #  forecast dates and data
+        forecast_dates = pd.date_range(start=stock_data.index[-1], periods=days_to_forecast + 1, freq='D')[1:]
+        forecast_data = pd.DataFrame({'Predicted Price': forecasted_values[1:]}, index=forecast_dates)
+
+        # Vis
+        st.write('Historical and Forecasted Stock Prices:')
+        historical_data = pd.DataFrame({'Historical Price': y}, index=stock_data.index)
+        full_chart_data = pd.concat([historical_data, forecast_data])
+        st.line_chart(full_chart_data)
+
+
+    ######################################################################################################
+
+
 
     API_KEY = 'KAM4TO0GVBQT9RSA'
     URL = "https://www.alphavantage.co/query"
@@ -271,8 +416,20 @@ def asml_prediction_forecast2(days_to_forecast): ## the parameter is the what is
             info(company_names[2])
 
 
+
     # ###############################Display
-    st.plotly_chart(fig)
+    st.plotly_chart(fig) ################ display lstm
+    st.write("The application using primarily LSTM but you can chose other models:")
+    with st.expander("Linear regression"):
+        from forecast_prediction.asml_prediction import asm_regression_forecast
+        st.write("If you want to chose set how many days you want to forecast, set it up above!")
+        asm_regression_forecast(days_to_forecast)
+    with st.expander("Forest Model:"):
+        forest_model(days_to_forecast)
+    with st.expander("Arime Model:"):
+        arima(days_to_forecast)
+    st.write()
+
     if decision == ("Hold - Predicted price within threshold limits" or "Hold - Conditions for selling not met" or "Hold - Conditions for buying not met"):
         st.write("Alternatively, if you do not want to hold: ")
         if formatted_latest_stock_price > formatted_last_forecasted_amount:
@@ -287,8 +444,6 @@ def asml_prediction_forecast2(days_to_forecast): ## the parameter is the what is
     elif decision == "Sell - Negative short-term trend and not oversold":
         #st.write("sell ")
         sell()
-
-
 
 
 
