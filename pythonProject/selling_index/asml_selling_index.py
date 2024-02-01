@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import streamlit as st
 from textblob import TextBlob
 
+
+
 from correlation import calculate_asml_correlation
 
 import requests
@@ -422,6 +424,7 @@ def asml_prediction_forecast2(days_to_forecast): ## the parameter is the what is
     st.write("The application using primarily LSTM but you can chose other models:")
     with st.expander("Linear regression"):
         from forecast_prediction.asml_prediction import asm_regression_forecast
+
         st.write("If you want to chose set how many days you want to forecast, set it up above!")
         asm_regression_forecast(days_to_forecast)
     with st.expander("Forest Model:"):
@@ -430,7 +433,7 @@ def asml_prediction_forecast2(days_to_forecast): ## the parameter is the what is
         arima(days_to_forecast)
     st.write()
 
-    if decision == ("Hold - Predicted price within threshold limits" or "Hold - Conditions for selling not met" or "Hold - Conditions for buying not met"):
+    if "Hold -" in decision:
         st.write("Alternatively, if you do not want to hold: ")
         if formatted_latest_stock_price > formatted_last_forecasted_amount:
             st.write("You might consider selling since the forecasted stock price is lower.")
@@ -439,10 +442,10 @@ def asml_prediction_forecast2(days_to_forecast): ## the parameter is the what is
             st.write("You might consider buying since the forecasted stock price is higher.")
             buy()
     elif decision == "Buy - Positive short-term trend and not overbought":
-        #st.write(" Buy")
+        # st.write(" Buy")
         buy()
     elif decision == "Sell - Negative short-term trend and not oversold":
-        #st.write("sell ")
+        # st.write("sell ")
         sell()
 
 
